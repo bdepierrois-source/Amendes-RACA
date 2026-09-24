@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#123372">
+<title>RACA – La caisse des amendes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  --pitch:#123372; --pitch-2:#1F4FA3; --chalk:#FFFFFF; --whistle:#FFFFFF; --accent:#1F4FA3;
+  --ink:#101A2E; --muted:#5A6680; --line:#D9E0EC; --surface:#FFFFFF; --bg:#EEF2F8;
+  --danger:#B3261E; --ok:#1E7A4F;
+  --display:"Barlow Condensed","Arial Narrow",Impact,sans-serif;
+  --body:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ink:#E6ECF7; --muted:#96A3BD; --line:#26324A; --surface:#141C2E; --bg:#0C1220;
+    --pitch:#0F2A5E; --pitch-2:#2D5FB8; --accent:#8FB2F2; --danger:#F2857D; --ok:#5CCB94;
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#E6ECF7; --muted:#96A3BD; --line:#26324A; --surface:#141C2E; --bg:#0C1220;
+  --pitch:#0F2A5E; --pitch-2:#2D5FB8; --accent:#8FB2F2; --danger:#F2857D; --ok:#5CCB94;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px);background:var(--pitch)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 var(--body);min-height:100vh;-webkit-tap-highlight-color:transparent}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--pitch-2);outline-offset:2px}
+
+/* Tableau d'affichage */
+.board{background:var(--pitch);color:var(--chalk);padding:18px 20px 22px;position:relative;overflow:hidden}
+.board::after{content:"";position:absolute;left:0;right:0;bottom:0;height:14px;background:
+  repeating-linear-gradient(180deg,#fff 0 4px,transparent 4px 7px);opacity:.95;pointer-events:none}
+.board{padding-bottom:34px}
+.board-top{display:flex;justify-content:space-between;align-items:flex-start;position:relative}
+.club{font-family:var(--display);font-weight:800;font-size:1.9rem;line-height:1;letter-spacing:.03em}
+.club small{display:block;font-family:var(--body);font-weight:500;font-size:.8rem;letter-spacing:0;opacity:.8;margin-top:4px}
+.sync{font-size:.8rem;opacity:.75}
+.score{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px;position:relative}
+.score div{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);border-radius:10px;padding:10px 12px}
+.score b{display:block;font-family:var(--display);font-weight:800;font-size:2.6rem;line-height:1;font-variant-numeric:tabular-nums}
+.score .due{background:#fff;color:#123372;border-color:#fff}
+.score span{font-size:.85rem;opacity:.85}
+
+main{max-width:640px;margin:0 auto;padding:16px 16px 110px}
+h2{font-family:var(--display);font-weight:700;font-size:1.6rem;margin:4px 0 12px}
+.row{display:flex;gap:8px;align-items:center}
+.seg{display:inline-flex;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:3px;margin-bottom:12px}
+.seg button{border:0;background:none;padding:6px 14px;border-radius:999px;font-weight:600;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--pitch-2);color:var(--chalk)}
+.chipfilter{display:inline-flex;align-items:center;gap:6px;background:var(--pitch-2);color:#fff;border:0;border-radius:999px;padding:5px 12px;font-weight:600;margin:0 0 12px 8px}
+
+.list{list-style:none;margin:0;padding:0;background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.list li{display:flex;align-items:center;gap:12px;padding:12px 14px;border-top:1px solid var(--line)}
+.list li:first-child{border-top:0}
+.who{flex:1;min-width:0}
+.who strong{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.who small{color:var(--muted);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.amt{font-family:var(--display);font-weight:700;font-size:1.35rem;font-variant-numeric:tabular-nums;white-space:nowrap}
+.paid .amt{color:var(--muted);text-decoration:line-through}
+.pay{border:1.5px solid var(--line);background:none;border-radius:8px;padding:6px 10px;font-size:.85rem;font-weight:600;white-space:nowrap}
+.paid .pay{border-color:var(--ok);color:var(--ok)}
+.pay{color:var(--accent)}
+.paid .pay{color:var(--ok)}
+.icon{border:0;background:none;padding:6px;color:var(--muted);font-size:1.1rem;line-height:1}
+.empty{padding:28px 18px;text-align:center;color:var(--muted);background:var(--surface);border:1px dashed var(--line);border-radius:14px}
+.empty button{margin-top:12px}
+
+.btn{border:0;border-radius:10px;padding:12px 16px;font-weight:600;background:var(--pitch-2);color:var(--chalk)}
+.btn.ghost{background:none;border:1.5px solid var(--line);color:var(--ink)}
+.btn.danger{background:none;border:1.5px solid var(--danger);color:var(--danger)}
+.btn.full{width:100%}
+.fab{position:fixed;right:18px;bottom:calc(84px + env(safe-area-inset-bottom,0px));width:60px;height:60px;border-radius:50%;border:0;background:var(--pitch-2);color:#fff;font-size:2rem;font-weight:600;border:3px solid #fff;box-shadow:0 6px 18px rgba(18,51,114,.35);z-index:5}
+
+nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);display:flex;padding-bottom:env(safe-area-inset-bottom,0px);z-index:6}
+nav.tabs button{flex:1;border:0;background:none;padding:10px 4px 12px;display:flex;flex-direction:column;align-items:center;gap:2px;color:var(--muted);font-size:.78rem;font-weight:600}
+nav.tabs svg{width:24px;height:24px}
+nav.tabs button[aria-current="page"]{color:var(--accent)}
+
+
+input[type=text],input[type=number],input[type=date],select,textarea{width:100%;padding:11px 12px;border:1.5px solid var(--line);border-radius:10px;background:var(--bg)}
+label.f{display:block;font-weight:600;font-size:.9rem;margin:14px 0 6px}
+.reasons{display:flex;flex-wrap:wrap;gap:8px}
+.reasons button{border:1.5px solid var(--line);background:var(--bg);border-radius:999px;padding:8px 14px;font-weight:600}
+.reasons button[aria-pressed="true"]{background:var(--pitch-2);border-color:var(--pitch-2);color:var(--chalk)}
+
+.sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;z-index:10}
+.sheet-bg.open{display:block}
+.sheet{position:fixed;left:0;right:0;bottom:0;max-height:92%;overflow:auto;background:var(--surface);border-radius:18px 18px 0 0;padding:18px 18px calc(18px + env(safe-area-inset-bottom,0px));transform:translateY(100%);transition:transform .22s ease;z-index:11;max-width:640px;margin:0 auto}
+.sheet.open{transform:none}
+.sheet h3{font-family:var(--display);font-size:1.5rem;margin:0 0 4px}
+.sheet .actions{display:flex;gap:10px;margin-top:20px}
+.sheet .actions .btn{flex:1}
+@media (prefers-reduced-motion:reduce){.sheet{transition:none}}
+
+.tarif{display:flex;align-items:center;gap:10px}
+.tarif input[type=text]{flex:1}
+.tarif input[type=number]{width:90px}
+.note{font-size:.88rem;color:var(--muted);margin-top:16px}
+.toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--surface);padding:10px 16px;border-radius:10px;font-weight:600;opacity:0;pointer-events:none;transition:opacity .2s;z-index:20;max-width:90%}
+.toast.show{opacity:1}
+.saving{position:fixed;inset:0;background:rgba(18,51,114,.6);display:none;align-items:center;justify-content:center;z-index:30;color:#fff;font-weight:600;font-size:1.1rem}
+.saving.on{display:flex}
+.readonly .fab,.readonly .editonly{display:none!important}
+</style>
+</head>
+<body>
+<header class="board">
+  <div class="board-top">
+    <div class="club">RACA<small>La caisse des amendes</small></div>
+    <div class="sync" id="sync">Chargement…</div>
+  </div>
+  <div class="score">
+    <div class="due"><b id="sDue">0 €</b><span>reste à payer</span></div>
+    <div><b id="sPaid">0 €</b><span>déjà dans la caisse</span></div>
+  </div>
+</header>
+
+<main id="app"></main>
+
+<button class="fab" id="fab" aria-label="Ajouter une amende">+</button>
+
+<nav class="tabs" aria-label="Navigation">
+  <button data-tab="fines" aria-current="page">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>Amendes</button>
+  <button data-tab="players">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.3-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18.5 14.8c1.7.8 2.8 2.5 3.1 5.2"/></svg>Joueurs</button>
+  <button data-tab="settings">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>Réglages</button>
+</nav>
+
+<div class="sheet-bg" id="sheetBg"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true"></div>
+<div class="toast" id="toast" role="status"></div>
+
+
+
+<script>
+(function(){
+const DEFAULT_TARIFS=[
+  {key:"retard",label:"Retard",amount:2},
+  {key:"absence",label:"Absence",amount:5},
+  {key:"tenue",label:"Tenue oubliée",amount:2},
+  {key:"carton",label:"Carton",amount:5},
+  {key:"autre",label:"Autre",amount:1}
+];
+const state={players:[],fines:[],tarifs:DEFAULT_TARIFS,tab:"fines",filter:"unpaid",playerFilter:null,canWrite:true,ready:{players:false,fines:false}};
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const eur=n=>(Math.round(n*100)/100).toLocaleString("fr-FR",{minimumFractionDigits:n%1?2:0,maximumFractionDigits:2})+" €";
+const today=()=>new Date().toISOString().slice(0,10);
+const fmtDate=d=>{try{return new Date(d+"T12:00:00").toLocaleDateString("fr-FR",{day:"numeric",month:"short"})}catch(e){return d}};
+function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove("show"),2200)}
+
+/* ---------- Stockage sur l'appareil ---------- */
+const LKEY="raca-caisse-v1";
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+const SEED={"players":{"8tv3m482a46xwu6r5do6":{"createdAt":1790238670824,"name":"Bilou Depierrois"},"amwhyjoag5k41j5o2abb":{"createdAt":1790238659157,"name":"Ben Bruyer"},"bt3qrk52tjlqadprhqb0":{"createdAt":1790238779501,"name":"Théo Fouquet"},"c9o84gic9le1x2hcyjbo":{"createdAt":1790238770151,"name":"Valentin Praud"},"sz73p1clhf5ylot0oa33":{"createdAt":1790238708107,"name":"Clément Davieaud"},"uq9hshsglmh61nhey9b0":{"createdAt":1790238628606,"name":"Tintin Praud"}},"fines":{},"tarifs":[{"amount":2,"key":"retard","label":"Retard entrainement"},{"amount":5,"key":"muf8wg19vqkmcp","label":"Retard match"},{"amount":10,"key":"muf8wyv3gem24l","label":"Absence match injustifiée"},{"amount":2,"key":"muf8xgf1k2z6ea","label":"Sport Easy non renseigné"},{"amount":1,"key":"muf8ydp7wwhsue","label":"Non respect du thème"}]};
+function normalize(d){return{players:d&&d.players||{},fines:d&&d.fines||{},tarifs:Array.isArray(d&&d.tarifs)?d.tarifs:null}}
+function load(){try{const l=JSON.parse(localStorage.getItem(LKEY)||"null");if(l&&l.players)return normalize(l)}catch(e){}return normalize(JSON.parse(JSON.stringify(SEED)))}
+let DATA=load();
+const store={mode:"local"};
+function persist(){try{localStorage.setItem(LKEY,JSON.stringify(DATA));return true}catch(e){return false}}
+function emit(){
+  state.players=Object.entries(DATA.players).map(([id,v])=>({id,...v}));
+  state.fines=Object.entries(DATA.fines).map(([id,v])=>({id,...v}));
+  if(Array.isArray(DATA.tarifs)&&DATA.tarifs.length)state.tarifs=DATA.tarifs;
+  state.ready={players:true,fines:true};render();
+}
+async function commit(mut,msg){
+  const next=JSON.parse(JSON.stringify(DATA));mut(next);DATA=next;
+  const ok=persist();emit();
+  toast(ok?(msg||"Enregistré"):"Attention : ce navigateur n'enregistre pas les données. Fais une sauvegarde.");
+}
+function applyRO(){}
+
+/* ---------- Partage et sauvegarde ---------- */
+const dstamp=()=>new Date().toISOString().slice(0,10);
+function saveFile(name,content,type){
+  const blob=new Blob([content],{type});const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);
+}
+async function shareOrSave(name,content,type,title){
+  try{
+    const file=new File([content],name,{type});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title});return}
+  }catch(e){if(e&&e.name==="AbortError")return}
+  saveFile(name,content,type);toast("Fichier téléchargé");
+}
+function playerRows(){
+  return state.players.map(p=>{const fs=state.fines.filter(f=>f.playerId===p.id);return{p,fs,...totals(fs)}}).sort((a,b)=>byLastName(a.p.name,b.p.name));
+}
+function recapText(){
+  const t=totals(state.fines);const rows=playerRows();
+  const d=new Date().toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"});
+  let out=`🏉 RACA : caisse des amendes au ${d}\nReste à payer : ${eur(t.due)}\nDéjà dans la caisse : ${eur(t.paid)}\n`;
+  const due=rows.filter(r=>r.due>0);
+  if(due.length){out+=`\nÀ régler :\n`;for(const r of due){const m=r.fs.filter(f=>!f.paid).map(f=>f.reason);out+=`• ${r.p.name} : ${eur(r.due)} (${m.join(", ")})\n`}}
+  const ok=rows.filter(r=>r.due===0).map(r=>r.p.name);
+  if(ok.length)out+=`\nÀ jour : ${ok.join(", ")}\n`;
+  return out.trim();
+}
+async function shareRecap(){
+  const txt=recapText();
+  try{if(navigator.share){await navigator.share({text:txt});return}}catch(e){if(e&&e.name==="AbortError")return}
+  try{await navigator.clipboard.writeText(txt);toast("Récap copié : colle-le dans WhatsApp");return}catch(e){}
+  openSheet(`<h3>Récap pour l'équipe</h3><p class="note" style="margin-top:4px">Sélectionne le texte et copie-le.</p><textarea rows="12" readonly style="margin-top:10px">${esc(txt)}</textarea><div class="actions"><button class="btn" data-act="close">Fermer</button></div>`);
+}
+function playersPageHTML(){
+  const t=totals(state.fines);const rows=playerRows();
+  const d=new Date().toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"});
+  const unpaid=[...state.fines].filter(f=>!f.paid).sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  const li=rows.map(r=>`<li><span>${esc(r.p.name)}</span><b class="${r.due?"due":"ok"}">${r.due?eur(r.due):"À jour"}</b></li>`).join("");
+  const fl=unpaid.map(f=>`<li><span>${esc(playerName(f.playerId))}<small>${esc(f.reason)}, ${fmtDate(f.date)}${f.note?", "+esc(f.note):""}</small></span><b>${eur(Number(f.amount)||0)}</b></li>`).join("")||`<li><span>Aucune amende à payer.</span></li>`;
+  return `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>RACA : caisse des amendes</title>
+<style>:root{--b:#123372;--b2:#1F4FA3;--ink:#101A2E;--mu:#5A6680;--line:#D9E0EC;--bg:#EEF2F8;--card:#fff;--red:#B3261E}
+@media (prefers-color-scheme:dark){:root{--ink:#E6ECF7;--mu:#96A3BD;--line:#26324A;--bg:#0C1220;--card:#141C2E;--red:#F2857D}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{background:var(--b);color:#fff;padding:calc(18px + env(safe-area-inset-top,0px)) 20px 34px;position:relative}
+header:after{content:"";position:absolute;left:0;right:0;bottom:0;height:14px;background:repeating-linear-gradient(180deg,#fff 0 4px,transparent 4px 7px)}
+h1{font:800 2rem/1 "Arial Narrow",Impact,sans-serif;margin:0;letter-spacing:.03em}header p{margin:4px 0 14px;opacity:.85;font-size:.9rem}
+.sc{display:grid;grid-template-columns:1fr 1fr;gap:12px}.sc div{border:1px solid rgba(255,255,255,.25);border-radius:10px;padding:10px 12px}.sc div:first-child{background:#fff;color:var(--b)}
+.sc b{display:block;font:800 2.2rem/1 "Arial Narrow",Impact,sans-serif}.sc span{font-size:.85rem}
+main{max-width:640px;margin:0 auto;padding:16px 16px calc(24px + env(safe-area-inset-bottom,0px))}h2{font:700 1.4rem "Arial Narrow",sans-serif;margin:18px 0 10px}
+ul{list-style:none;margin:0;padding:0;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+li{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:12px 14px;border-top:1px solid var(--line)}li:first-child{border-top:0}
+small{display:block;color:var(--mu)}b{white-space:nowrap}.due{color:var(--red)}.ok{color:var(--mu);font-weight:500}</style></head>
+<body><header><h1>RACA</h1><p>Caisse des amendes, mise à jour le ${d}</p><div class="sc"><div><b>${eur(t.due)}</b><span>reste à payer</span></div><div><b>${eur(t.paid)}</b><span>déjà dans la caisse</span></div></div></header>
+<main><h2>Par joueur</h2><ul>${li}</ul><h2>Amendes à régler</h2><ul>${fl}</ul></main></body></html>`;
+}
+function importFile(file){
+  const r=new FileReader();
+  r.onload=async()=>{
+    let d;try{d=JSON.parse(r.result)}catch(e){toast("Ce fichier n'est pas une sauvegarde valide.");return}
+    if(!d||typeof d.players!=="object"||typeof d.fines!=="object"){toast("Ce fichier n'est pas une sauvegarde valide.");return}
+    const np=Object.keys(d.players).length,nf=Object.keys(d.fines).length;
+    if(!await askConfirm(`Remplacer les données actuelles par cette sauvegarde (${np} joueurs, ${nf} amendes) ?`,"Restaurer"))return;
+    await commit(x=>{const n=normalize(d);x.players=n.players;x.fines=n.fines;if(n.tarifs)x.tarifs=n.tarifs},"Sauvegarde restaurée");closeSheet();
+  };
+  r.readAsText(file);
+}
+
+/* ---------- Calculs ---------- */
+/* Tri alphabétique sur le deuxième nom (nom de famille), puis sur le prénom */
+function lastKey(n){const w=String(n||"").trim().split(/\s+/);return w.length>1?w.slice(1).join(" "):w[0]||""}
+const byLastName=(a,b)=>lastKey(a).localeCompare(lastKey(b),"fr",{sensitivity:"base"})||String(a).localeCompare(String(b),"fr",{sensitivity:"base"});
+const playerName=id=>(state.players.find(p=>p.id===id)||{}).name||"Joueur supprimé";
+function totals(list){let due=0,paid=0;for(const f of list){const a=Number(f.amount)||0;f.paid?paid+=a:due+=a}return{due,paid}}
+
+/* ---------- Rendu ---------- */
+function render(){
+  const t=totals(state.fines);
+  $("#sDue").textContent=eur(t.due);$("#sPaid").textContent=eur(t.paid);
+  $("#sync").textContent="Sur ce téléphone";
+  document.querySelectorAll("nav.tabs button").forEach(b=>{if(b.dataset.tab===state.tab)b.setAttribute("aria-current","page");else b.removeAttribute("aria-current")});
+  $("#fab").style.display=state.tab==="settings"?"none":"";
+  $("#fab").setAttribute("aria-label",state.tab==="players"?"Ajouter un joueur":"Ajouter une amende");
+  const app=$("#app");
+  if(!state.ready.players||!state.ready.fines){app.innerHTML='<p class="note">Chargement de la caisse…</p>';return}
+  if(state.tab==="fines")app.innerHTML=viewFines();
+  else if(state.tab==="players")app.innerHTML=viewPlayers();
+  else app.innerHTML=viewSettings();
+}
+function viewFines(){
+  let list=[...state.fines];
+  if(state.playerFilter)list=list.filter(f=>f.playerId===state.playerFilter);
+  if(state.filter==="unpaid")list=list.filter(f=>!f.paid);
+  list.sort((a,b)=>(b.date||"").localeCompare(a.date||"")||(b.createdAt||0)-(a.createdAt||0));
+  let h=`<h2>Amendes</h2><div class="row" style="flex-wrap:wrap"><div class="seg" role="group" aria-label="Filtre">
+    <button data-act="filter" data-v="unpaid" aria-pressed="${state.filter==="unpaid"}">À payer</button>
+    <button data-act="filter" data-v="all" aria-pressed="${state.filter==="all"}">Toutes</button></div>`;
+  if(state.playerFilter)h+=`<button class="chipfilter" data-act="clearPlayer">${esc(playerName(state.playerFilter))} ✕</button>`;
+  h+=`</div>`;
+  if(!state.players.length)return h+`<div class="empty">Commence par ajouter les joueurs de l'équipe.<br><button class="btn editonly" data-act="goPlayers">Ajouter des joueurs</button></div>`;
+  if(!list.length)return h+`<div class="empty">${state.filter==="unpaid"?"Aucune amende à payer. Tout le monde est à jour.":"Aucune amende enregistrée pour l'instant."}</div>`;
+  h+=`<ul class="list">`;
+  for(const f of list){
+    h+=`<li class="${f.paid?"paid":""}">
+      <div class="who"><strong>${esc(playerName(f.playerId))}</strong><small>${esc(f.reason)} · ${fmtDate(f.date)}${f.note?" · "+esc(f.note):""}</small></div>
+      <span class="amt">${eur(Number(f.amount)||0)}</span>
+      <button class="pay editonly" data-act="togglePaid" data-id="${f.id}">${f.paid?"Payée":"Encaisser"}</button>
+      <button class="icon editonly" data-act="editFine" data-id="${f.id}" aria-label="Modifier ou supprimer">✎</button>
+    </li>`;
+  }
+  return h+`</ul>`;
+}
+function viewPlayers(){
+  let h=`<h2>Joueurs</h2>`;
+  if(!state.players.length)return h+`<div class="empty">Aucun joueur pour l'instant.<br><button class="btn editonly" data-act="addPlayer">Ajouter un joueur</button></div>`;
+  const rows=state.players.map(p=>{const fs=state.fines.filter(f=>f.playerId===p.id);return{p,...totals(fs),n:fs.length}})
+    .sort((a,b)=>byLastName(a.p.name,b.p.name));
+  h+=`<ul class="list">`;
+  for(const r of rows){
+    h+=`<li>
+      <div class="who" data-act="showPlayer" data-id="${r.p.id}" style="cursor:pointer"><strong>${esc(r.p.name)}</strong><small>${r.n} amende${r.n>1?"s":""} · ${eur(r.paid)} payé</small></div>
+      <span class="amt" style="color:${r.due?"var(--danger)":"var(--muted)"}">${eur(r.due)}</span>
+      <button class="icon editonly" data-act="editPlayer" data-id="${r.p.id}" aria-label="Modifier ou supprimer ${esc(r.p.name)}">✎</button>
+    </li>`;
+  }
+  return h+`</ul><p class="note">Touche un joueur pour voir le détail de ses amendes.</p>`;
+}
+function viewSettings(){
+  let h=`<h2>Tarifs</h2><p class="note" style="margin-top:0">Montant proposé par défaut pour chaque motif. Tu peux toujours l'ajuster au moment d'ajouter une amende.</p><div id="tarifs">`;
+  state.tarifs.forEach((t,i)=>{h+=`<div class="tarif" style="margin-top:10px">
+    <input type="text" value="${esc(t.label)}" data-i="${i}" data-k="label" aria-label="Motif" ${state.canWrite?"":"disabled"}>
+    <input type="number" min="0" step="0.5" inputmode="decimal" value="${t.amount}" data-i="${i}" data-k="amount" aria-label="Montant en euros" ${state.canWrite?"":"disabled"}>
+    <button class="icon editonly" data-act="delTarif" data-i="${i}" aria-label="Supprimer ce motif">✕</button></div>`});
+  h+=`</div><div class="row editonly" style="margin-top:16px"><button class="btn ghost" data-act="addTarif">Ajouter un motif</button><button class="btn" data-act="saveTarifs">Enregistrer</button></div>`;
+  h+=`<h2 style="margin-top:28px">Partager avec l'équipe</h2>
+    <p class="note" style="margin-top:0">Envoie l'état de la caisse aux joueurs, par exemple sur le groupe WhatsApp. Ils n'ont rien à installer.</p>
+    <div style="display:grid;gap:10px;margin-top:12px">
+      <button class="btn" data-act="shareRecap">Envoyer le récap (texte)</button>
+      <button class="btn ghost" data-act="sharePage">Envoyer la page joueurs (fichier)</button>
+    </div>
+    <h2 style="margin-top:28px">Sauvegarde</h2>
+    <p class="note" style="margin-top:0">Les données sont enregistrées sur ce téléphone, dans ce navigateur. Fais une sauvegarde de temps en temps : elle permet aussi de passer la caisse sur un autre téléphone.</p>
+    <div style="display:grid;gap:10px;margin-top:12px">
+      <button class="btn ghost" data-act="backup">Télécharger une sauvegarde</button>
+      <button class="btn ghost" data-act="restore">Restaurer une sauvegarde</button>
+    </div>
+    <input type="file" id="restoreInput" accept="application/json,.json" hidden>`;
+  return h;
+}
+
+/* ---------- Feuilles (formulaires) ---------- */
+function openSheet(html){$("#sheet").innerHTML=html;$("#sheet").classList.add("open");$("#sheetBg").classList.add("open");setTimeout(()=>{const i=$("#sheet").querySelector("[autofocus]");i&&i.focus()},230)}
+function closeSheet(){if(confirmResolve)endConfirm(false);$("#sheet").classList.remove("open");$("#sheetBg").classList.remove("open")}
+
+function fineSheet(f){
+  const isNew=!f;
+  const reason=f?f.reason:state.tarifs[0]?.label||"Autre";
+  const amount=f?f.amount:(state.tarifs[0]?.amount??0);
+  const pid=f?f.playerId:(state.playerFilter||"");
+  const opts=[...state.players].sort((a,b)=>byLastName(a.name,b.name)).map(p=>`<option value="${p.id}" ${p.id===pid?"selected":""}>${esc(p.name)}</option>`).join("");
+  openSheet(`<h3>${isNew?"Nouvelle amende":"Modifier l'amende"}</h3>
+    <label class="f" for="fPlayer">Joueur</label>
+    <select id="fPlayer"><option value="">Choisir un joueur…</option>${opts}</select>
+    <label class="f">Motif</label>
+    <div class="reasons" id="fReasons">${state.tarifs.map(t=>`<button type="button" data-amount="${t.amount}" aria-pressed="${t.label===reason}">${esc(t.label)}</button>`).join("")}</div>
+    <div class="row" style="gap:12px">
+      <div style="flex:1"><label class="f" for="fAmount">Montant (€)</label><input id="fAmount" type="number" min="0" step="0.5" inputmode="decimal" value="${amount}"></div>
+      <div style="flex:1"><label class="f" for="fDate">Date</label><input id="fDate" type="date" value="${f?f.date:today()}"></div>
+    </div>
+    <label class="f" for="fNote">Précision (facultatif)</label>
+    <input id="fNote" type="text" maxlength="80" placeholder="Ex. : 20 min en retard à l'entraînement" value="${esc(f?.note||"")}">
+    <div class="actions">${isNew?`<button class="btn ghost" data-act="close">Annuler</button>`:`<button class="btn danger" data-act="delFine" data-id="${f.id}">Supprimer</button>`}
+      <button class="btn" data-act="saveFine" data-id="${f?f.id:""}">${isNew?"Ajouter l'amende":"Enregistrer"}</button></div>`);
+  $("#fReasons").dataset.reason=reason;
+}
+function playerSheet(p){
+  openSheet(`<h3>${p?"Modifier le joueur":"Nouveau joueur"}</h3>
+    <label class="f" for="pName">Nom ou surnom</label>
+    <input id="pName" type="text" maxlength="40" value="${esc(p?.name||"")}" autofocus placeholder="Ex. : Julien Martin">
+    ${p?"":`<p class="note">Saisis le prénom puis le nom : les joueurs sont classés par nom de famille. Tu peux en ajouter plusieurs d'un coup en les séparant par des virgules.</p>`}
+    <div class="actions">${p?`<button class="btn danger" data-act="delPlayer" data-id="${p.id}">Supprimer</button>`:`<button class="btn ghost" data-act="close">Annuler</button>`}
+      <button class="btn" data-act="savePlayer" data-id="${p?p.id:""}">${p?"Enregistrer":"Ajouter"}</button></div>`);
+}
+
+/* Confirmation intégrée (les fenêtres du navigateur sont bloquées dans l'appli) */
+let confirmResolve=null;
+function askConfirm(msg,label){
+  return new Promise(res=>{
+    confirmResolve=res;
+    openSheet(`<h3>Confirmer</h3><p style="margin:8px 0 0">${esc(msg)}</p><p class="note" style="margin-top:6px">Cette action est définitive.</p>
+      <div class="actions"><button class="btn ghost" data-act="confirmNo" autofocus>Annuler</button><button class="btn danger" data-act="confirmYes">${esc(label)}</button></div>`);
+  });
+}
+function endConfirm(v){const r=confirmResolve;confirmResolve=null;if(r)r(v)}
+
+/* ---------- Actions ---------- */
+document.addEventListener("click",async e=>{
+  const tab=e.target.closest("nav.tabs button");
+  if(tab){state.tab=tab.dataset.tab;render();window.scrollTo(0,0);return}
+  const r=e.target.closest("#fReasons button");
+  if(r){$("#fReasons").querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",b===r));$("#fReasons").dataset.reason=r.textContent;$("#fAmount").value=r.dataset.amount;return}
+  const el=e.target.closest("[data-act]");if(!el)return;
+  const id=el.dataset.id,a=el.dataset.act;
+  switch(a){
+    case"filter":state.filter=el.dataset.v;render();break;
+    case"clearPlayer":state.playerFilter=null;render();break;
+    case"goPlayers":state.tab="players";render();playerSheet();break;
+    case"showPlayer":state.playerFilter=id;state.filter="all";state.tab="fines";render();window.scrollTo(0,0);break;
+    case"close":closeSheet();break;
+    case"shareRecap":shareRecap();break;
+    case"sharePage":shareOrSave(`raca-amendes-${dstamp()}.html`,playersPageHTML(),"text/html","RACA : caisse des amendes");break;
+    case"backup":saveFile(`raca-caisse-sauvegarde-${dstamp()}.json`,JSON.stringify(DATA,null,1),"application/json");toast("Sauvegarde téléchargée");break;
+    case"restore":$("#restoreInput").click();break;
+    case"confirmYes":endConfirm(true);return;
+    case"confirmNo":endConfirm(false);closeSheet();return;
+    case"addPlayer":playerSheet();break;
+    case"editPlayer":playerSheet(state.players.find(p=>p.id===id));break;
+    case"savePlayer":{
+      const v=$("#pName").value.trim();if(!v){toast("Indique un nom.");return}
+      if(id){await commit(d=>{if(d.players[id])d.players[id].name=v},"Joueur modifié")}
+      else{const names=v.split(",").map(s=>s.trim()).filter(Boolean);
+        await commit(d=>{for(const n of names)d.players[uid()]={name:n,createdAt:Date.now()}},names.length>1?names.length+" joueurs ajoutés":"Joueur ajouté")}
+      closeSheet();break}
+    case"delPlayer":{
+      const n=state.fines.filter(f=>f.playerId===id).length;
+      if(!await askConfirm(n?`Supprimer ce joueur et ses ${n} amende${n>1?"s":""} ?`:"Supprimer ce joueur ?","Supprimer le joueur"))return;
+      await commit(d=>{for(const k in d.fines)if(d.fines[k].playerId===id)delete d.fines[k];delete d.players[id]},"Joueur supprimé");
+      if(state.playerFilter===id)state.playerFilter=null;closeSheet();break}
+    case"editFine":fineSheet(state.fines.find(f=>f.id===id));break;
+    case"saveFine":{
+      const playerId=$("#fPlayer").value,amount=parseFloat($("#fAmount").value);
+      if(!playerId){toast("Choisis un joueur.");return}
+      if(!(amount>=0)){toast("Indique un montant valide.");return}
+      const data={playerId,amount,reason:$("#fReasons").dataset.reason||"Autre",date:$("#fDate").value||today(),note:$("#fNote").value.trim()};
+      if(id)await commit(d=>{if(d.fines[id])Object.assign(d.fines[id],data)},"Amende modifiée");
+      else await commit(d=>{d.fines[uid()]={...data,paid:false,createdAt:Date.now()}},"Amende ajoutée");
+      closeSheet();break}
+    case"delFine":{const f=state.fines.find(x=>x.id===id);if(!f)return;
+      if(!await askConfirm(`Supprimer l'amende de ${eur(Number(f.amount)||0)} de ${playerName(f.playerId)} (${f.reason}) ?`,"Supprimer l'amende"))return;await commit(d=>{delete d.fines[id]},"Amende supprimée");closeSheet();break}
+    case"togglePaid":{const f=state.fines.find(x=>x.id===id);if(!f)return;
+      el.disabled=true;await commit(d=>{if(d.fines[id]){d.fines[id].paid=!f.paid;d.fines[id].paidAt=f.paid?null:Date.now()}},f.paid?"Remise à payer":"Encaissée");el.disabled=false;break}
+    case"addTarif":collectTarifs();state.tarifs=[...state.tarifs,{key:uid(),label:"Nouveau motif",amount:1}];render();break;
+    case"delTarif":collectTarifs();state.tarifs=state.tarifs.filter((_,i)=>i!=el.dataset.i);render();break;
+    case"saveTarifs":{collectTarifs();const t=state.tarifs.filter(x=>x.label.trim());await commit(d=>{d.tarifs=t},"Tarifs enregistrés");break}
+  }
+});
+function collectTarifs(){
+  const t=state.tarifs.map(x=>({...x}));
+  document.querySelectorAll("#tarifs input").forEach(i=>{const x=t[i.dataset.i];if(!x)return;x[i.dataset.k]=i.dataset.k==="amount"?(parseFloat(i.value)||0):i.value.trim()});
+  state.tarifs=t;
+}
+$("#fab").addEventListener("click",()=>{
+  if(state.tab==="players")return playerSheet();
+  if(!state.players.length){state.tab="players";render();return playerSheet()}
+  fineSheet();
+});
+$("#sheetBg").addEventListener("click",closeSheet);
+document.addEventListener("change",e=>{if(e.target.id==="restoreInput"&&e.target.files[0]){importFile(e.target.files[0]);e.target.value=""}});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
+
+/* ---------- Démarrage ---------- */
+emit();
+})();
+</script>
+</body>
+</html>
